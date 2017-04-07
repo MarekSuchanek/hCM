@@ -1,0 +1,39 @@
+name:                hCM
+version:             0.1.0.0
+synopsis:            Conceptual modeling support library for Haskell
+homepage:            https://github.com/MarekSuchanek/hCM
+license:             MIT
+license-file:        LICENSE
+author:              Marek Suchánek
+copyright:           2017 Marek Suchánek
+category:            Model, Development, Data Structures
+build-type:          Simple
+extra-source-files:  README.md
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     Lib
+  build-depends:       base >= 4.7 && < 5
+  default-language:    Haskell2010
+
+executable hCM-exe
+  hs-source-dirs:      app
+  main-is:             Main.hs
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  build-depends:       base
+                     , hCM
+  default-language:    Haskell2010
+
+test-suite hCM-test
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             Spec.hs
+  build-depends:       base
+                     , hCM
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  default-language:    Haskell2010
+
+source-repository head
+  type:     git
+  location: https://github.com/MarekSuchanek/hCM
