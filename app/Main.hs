@@ -1,6 +1,10 @@
 module Main where
 
-import Lib
+import System.Environment
+import CM.Visualization
 
 main :: IO ()
-main = someFunc
+main = do
+  args <- getArgs
+  filecontent <- readFile . head $ args
+  putStrLn . modelToDot $ filecontent
