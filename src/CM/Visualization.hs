@@ -1,62 +1,77 @@
-
-module CM.Visualization
-    (
-      modelToDot,
-      instanceToDot
-    ) where
+{-# LANGUAGE RecordWildCards #-}
+module CM.Visualization where
 
 import Data.Maybe
-import Language.Haskell.Parser
-import Language.Haskell.Syntax
+import Data.List
+import Data.Hashable
+import CM.Metamodel
 
-data Entity = Entity {
-  entityName :: String,
-  entityAttributes :: [(String, String)]
-} deriving Show
+metaElementToDotModel                   :: MetaElement -> String
+metaElementToDotModel MetaEntity { .. } = "\"" ++ meName ++ "\" [shape=none, margin=0, label=<\n" ++ table ++ "\n>];\n"
+  where table = start ++ header ++ rows ++ end
+        start = "\t<table border=\"0\" cellborder=\"1\" cellspacing=\"0\" cellpadding=\"4\">\n"
+        header = "\t\t<tr><td colspan=\"3\" bgcolor=\"lightblue\">" ++ meName ++ "</td></tr>\n"
+        rows = concatMap metaAttributeToRow meAttributes
+        end = "\t</table>"
+        metaAttributeToRow MetaAttribute { .. } = "\t\t<tr><td align=\"left\">" ++ maName ++ "</td><td>::</td><td align=\"left\">" ++ maType ++ "</td></tr>\n"
+metaElementToDotModel MetaRelationship { .. } = "\"" ++ mrName ++ "\" [shape=diamond];\n" ++ participationLinks
+  where participationLinks = concatMap metaParticipationToModelLink mrParticipations
+        metaParticipationToModelLink MetaParticipation { .. } = "\"" ++ mrName ++ "\" -> \"" ++ mpType ++ "\" [label=\""++ mpName ++" \\n ["++ ptypeShow mpPType ++"]\"];\n"
+metaElementToDotModel MetaModel { .. } = "digraph CM_model {\n" ++ graphset ++ nodeset ++ edgeset ++ content ++ "}\n"
+  where graphset = "graph[rankdir=TD, overlap=false, splines=true, label=\"" ++ fromMaybe "" mmName ++ "\"];\n"
+        nodeset  = "node [shape=record, fontsize=10, fontname=\"Verdana\"];\n"
+        edgeset  = "edge [arrowhead=none, fontsize=10];\n\n"
+        content  =  intercalate "\n" . map elementToDotModel . filterEntitiesType $ mmElements
 
-data EntityType = EntityType {
-  entityTypeName :: String,
-  entityTypeCons :: [Entity]
-} deriving Show
+filterEntitiesType :: [MetaElement] -> [MetaElement]
+filterEntitiesType = filterHelper []
+  where filterHelper seen [] = seen
+        filterHelper seen (x:xs)
+          | xTypeSeen = filterHelper seen xs
+          | otherwise = filterHelper (seen ++ [x]) xs
+          where xTypeSeen = any (\e -> elementName x == elementName e) seen
 
-data Model = Model {
-  modelName :: String,
-  modelTypes :: [EntityType]
-} deriving Show
 
-hsConDeclToEntity :: HsConDecl -> Entity
-hsConDeclToEntity (HsConDecl _ (HsIdent name) types) = Entity {
-  entityName = name,
-  entityAttributes = map (\x -> ("", show x)) types
-}
-hsConDeclToEntity (HsRecDecl _ (HsIdent name) attrs) = Entity {
-  entityName = name,
-  entityAttributes = map parseAttribute attrs
-}
-    where parseAttribute (attrNames, attrType) = (parseName . head $ attrNames, parseType attrType)
-          parseName (HsIdent str) = str
-          parseType (HsBangedTy (HsTyCon (UnQual (HsIdent str)))) = str
-          parseType (HsUnBangedTy (HsTyCon (UnQual (HsIdent str)))) = str
+elementToDotModel :: (CMElement a) => a -> String
+elementToDotModel = maybe "" metaElementToDotModel . toMeta
 
-hsDeclToEntityType :: HsDecl -> Maybe EntityType
-hsDeclToEntityType (HsDataDecl _ _ (HsIdent name) _ cons _) = Just EntityType {
-  entityTypeName = name,
-  entityTypeCons = map hsConDeclToEntity cons
-}
-hsDeclToEntityType _ = Nothing
 
-hsModuleToModel :: HsModule -> Model
-hsModuleToModel (HsModule _ (Module moduleName) _ _ decls) = Model {
-  modelName = moduleName,
-  modelTypes = catMaybes . map hsDeclToEntityType $ decls
-}
+metaElementToDotInstance                   :: MetaElement -> String
+metaElementToDotInstance MetaEntity { .. } = "\"" ++ dotId ++ "\" [shape=none, margin=0, label=<\n" ++ table ++ "\n>];\n"
+  where table = start ++ header ++ rows ++ end
+        start = "\t<table border=\"0\" cellborder=\"1\" cellspacing=\"0\" cellpadding=\"4\">\n"
+        header = "\t\t<tr><td colspan=\"3\" bgcolor=\"" ++ color ++ "\"><u>" ++ displayId ++ ":" ++ meName ++ "</u></td></tr>\n"
+        rows = concatMap metaAttributeToRow meAttributes
+        end = "\t</table>"
+        color = if True then "lightgreen" else "darksalmon"
+        dotId = makeDotId meIdentifier
+        displayId = makeDisplayId meIdentifier
+        metaAttributeToRow MetaAttribute { .. } = "\t\t<tr><td align=\"left\">" ++ maName ++ "</td><td>=</td><td align=\"left\">" ++ maValue ++ "</td></tr>\n"
+metaElementToDotInstance MetaRelationship { .. } = "\"" ++ dotId ++ "\" [shape=diamond, label=<<u>" ++ displayId ++ ":" ++ mrName ++ "</u>>, style=\"filled\", fillcolor=\"" ++ color ++ "\"];\n" ++ participationLinks
+  where participationLinks = concatMap metaParticipationToLink mrParticipations
+        metaParticipationToLink MetaParticipation { .. } = "\"" ++ dotId ++ "\" -> \"" ++ makeDotId mpIdentifier ++ "\" [label=\"" ++ mpName ++ "\"];\n"
+        dotId = makeDotId mrIdentifier
+        displayId = makeDisplayId mrIdentifier
+        color = if True then "lightgreen" else "darksalmon"
+metaElementToDotInstance MetaModel { .. } = "digraph CM_instance {\n" ++ graphset ++ nodeset ++ edgeset ++ content ++ "}\n"
+  where graphset = "graph[rankdir=TD, overlap=false, splines=true, label=<<u>" ++ fromMaybe "" mmIdentifier ++ ":" ++ fromMaybe "" mmName ++ "</u>>];\n"
+        nodeset  = "node [shape=record, fontsize=10, fontname=\"Verdana\"];\n"
+        edgeset  = "edge [arrowhead=none, fontsize=10];\n\n"
+        content  =  intercalate "\n" . map metaElementToDotInstance . filterEntitiesInstance $ mmElements
 
--- TODO: process AST to own structures and then to DOT (Graphviz)
-modelToDot :: String -> String
-modelToDot input = case parseModule input of
-                ParseOk m -> show . hsModuleToModel $ m
-                ParseFailed srcLoc msg -> error ("Parse failed " ++ show srcLoc ++ ": " ++ msg)
+makeDotId :: String -> String
+makeDotId s = if length s > 10 then "h" ++ (show . hash $ s) else s
 
--- TODO: implement similarly to modelToDot (with default Show?)
-instanceToDot :: String -> String
-instanceToDot x = "Not implemented"
+makeDisplayId :: String -> String
+makeDisplayId s = if length s > 10 then "" else s
+
+filterEntitiesInstance :: [MetaElement] -> [MetaElement]
+filterEntitiesInstance = filterHelper []
+  where filterHelper seen [] = seen
+        filterHelper seen (x:xs)
+          | xTypeSeen = filterHelper seen xs
+          | otherwise = filterHelper (seen ++ [x]) xs
+          where xTypeSeen = any (\e -> identifier x == identifier e) seen
+
+elementToDotInstance :: (CMElement a) => a -> String
+elementToDotInstance = maybe "" metaElementToDotInstance . toMeta
