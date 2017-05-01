@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
+
 module CM.Metamodel where
 
 import Data.Maybe
@@ -12,7 +13,7 @@ class (Show i) => Identifiable i where
   identic x y = identifier x == identifier y
 
 -- Generic element of conceptual model
-class (Show e, Read e) => CMElement e where
+class (Show e, Read e) =>  CMElement e where
   constraints :: [e -> Bool]
   constraints = []
   valid :: e -> Bool
@@ -35,7 +36,11 @@ class (CMElement a, Identifiable a) => Entity a where
   entitySuperNames :: a -> [String]
   entitySuperNames _ = []
   toMetaEntity :: a -> MetaElement
-  toMetaEntity x = MetaEntity {meName = entityName x , meAttributes = entityAttributes x, meIdentifier = identifier x, meValid = valid x }
+  toMetaEntity x = MetaEntity { meName = entityName x
+                              , meAttributes = entityAttributes x
+                              , meIdentifier = identifier x
+                              , meValid = valid x
+                              }
 
 -- Relationship that connects multiple entities
 class (CMElement a, Identifiable a) => Relationship a where
@@ -45,14 +50,25 @@ class (CMElement a, Identifiable a) => Relationship a where
   relationshipSuperNames :: a -> [String]
   relationshipSuperNames _ = []
   toMetaRelationship :: a -> MetaElement
-  toMetaRelationship x = MetaRelationship {mrName = "Neighbors", mrParticipations = relationshipParticipations x, mrIdentifier = identifier x, mrValid = valid x}
+  toMetaRelationship x = MetaRelationship { mrName = relationshipName x
+                                          , mrParticipations = relationshipParticipations x
+                                          , mrIdentifier = identifier x
+                                          , mrValid = valid x
+                                          }
 
 --------------------------------------------------------------------------------
-data ParticipationQuantity = Limited Word | Unlimited deriving (Show, Read, Eq, Ord)
-data ParticipationType = MandatoryUnique | OptionalUnique
-                       | Mandatory ParticipationQuantity  | Optional ParticipationQuantity
-                       | Custom ParticipationQuantity ParticipationQuantity
-                       deriving (Show, Read, Eq)
+data ParticipationQuantity
+  = Limited Word
+  | Unlimited
+  deriving (Show, Read, Eq, Ord)
+
+data ParticipationType
+  = MandatoryUnique
+  | OptionalUnique
+  | Mandatory ParticipationQuantity
+  | Optional ParticipationQuantity
+  | Custom ParticipationQuantity ParticipationQuantity
+  deriving (Show, Read, Eq)
 
 pquantShow :: ParticipationQuantity -> String
 pquantShow (Limited x) = show x
@@ -60,39 +76,71 @@ pquantShow Unlimited = "*"
 
 ptypeShow :: ParticipationType -> String
 ptypeShow pt = case pt of
-   MandatoryUnique -> "1"
-   OptionalUnique -> "0..1"
-   (Mandatory x) -> "1.." ++ pquantShow x
-   (Optional x) -> "0.." ++ pquantShow x
-   (Custom x y) -> pquantShow x ++ ".." ++ pquantShow y
+                MandatoryUnique -> "1"
+                OptionalUnique -> "0..1"
+                (Mandatory x) -> "1.." ++ pquantShow x
+                (Optional x) -> "0.." ++ pquantShow x
+                (Custom x y) -> pquantShow x ++ ".." ++ pquantShow y
 
+data MetaAttribute = MetaAttribute { maName :: String
+                                   , maType :: String
+                                   , maValue :: String
+                                   } deriving (Show, Read, Eq)
 
-data MetaAttribute = MetaAttribute { maName :: String, maType :: String, maValue :: String } deriving (Show,Read,Eq)
-data MetaParticipation = MetaParticipation { mpName :: String, mpType :: String, mpIdentifier :: String, mpPType :: ParticipationType } deriving (Show,Read,Eq)
+data MetaParticipation = MetaParticipation { mpName       :: String
+                                           , mpType       :: String
+                                           , mpIdentifier :: String
+                                           , mpPType      :: ParticipationType
+                                           } deriving (Show, Read, Eq)
 
 tupleToAttribute :: (String, String, String) -> MetaAttribute
-tupleToAttribute (a, b, c) = MetaAttribute { maName = a, maType = b, maValue = c }
+tupleToAttribute (a, b, c) = MetaAttribute {maName = a, maType = b, maValue = c}
 
 tupleToParticipation :: (String, String, String, ParticipationType) -> MetaParticipation
-tupleToParticipation (a, b, c, t) = MetaParticipation { mpName = a, mpType = b, mpIdentifier = c, mpPType = t }
+tupleToParticipation (a, b, c, t) = MetaParticipation {mpName = a, mpType = b, mpIdentifier = c, mpPType = t}
 
-data MetaElement = MetaEntity { meName :: String, meIdentifier :: String, meAttributes :: [MetaAttribute], meValid :: Bool}
-                 | MetaRelationship { mrName :: String, mrIdentifier :: String, mrParticipations :: [MetaParticipation], mrValid :: Bool}
-                 | MetaModel { mmName :: Maybe String, mmIdentifier :: Maybe String, mmElements :: [MetaElement], mmValid :: Bool}
-                 deriving (Show, Read, Eq)
+data MetaElement
+  = MetaEntity { meName       :: String
+               , meIdentifier :: String
+               , meAttributes :: [MetaAttribute]
+               , meValid      :: Bool
+               }
+  | MetaRelationship { mrName           :: String
+                     , mrIdentifier     :: String
+                     , mrParticipations :: [MetaParticipation]
+                     , mrValid          :: Bool
+                     }
+  | MetaModel { mmName       :: Maybe String
+              , mmIdentifier :: Maybe String
+              , mmElements   :: [MetaElement]
+              , mmValid      :: Bool
+              }
+  deriving (Show, Read, Eq)
 
 instance CMElement MetaElement where
   toMeta = id
-  elementName MetaEntity { .. } = meName
-  elementName MetaRelationship { .. } = mrName
-  elementName MetaModel { .. } = fromMaybe "" mmName
+  elementName MetaEntity {..} = meName
+  elementName MetaRelationship {..} = mrName
+  elementName MetaModel {..} = fromMaybe "" mmName
 
 instance Identifiable MetaElement where
-  identifier MetaEntity { .. } = meIdentifier
-  identifier MetaRelationship { .. } = mrIdentifier
-  identifier MetaModel { .. } = fromMaybe "" mmIdentifier
+  identifier MetaEntity {..} = meIdentifier
+  identifier MetaRelationship {..} = mrIdentifier
+  identifier MetaModel {..} = fromMaybe "" mmIdentifier
 
 instance Entity MetaElement where
-  entityAttributes MetaEntity { .. } = map tupleToAttribute [("name", "String", meName), ("attributes", "[MetaAttribute]", show meAttributes)]
-  entityAttributes MetaRelationship { .. } = map tupleToAttribute [("name", "String", mrName), ("participants", "[MetaParticipation]", show mrParticipations)]
-  entityAttributes MetaModel { .. } = map tupleToAttribute [("name", "String", fromMaybe "" mmName), ("elements", "[MetaElement]", show mmElements)]
+  entityAttributes MetaEntity {..} =
+    map tupleToAttribute
+      [ ("name", "String", meName)
+      , ("attributes", "[MetaAttribute]", show meAttributes)
+      ]
+  entityAttributes MetaRelationship {..} =
+    map tupleToAttribute
+      [ ("name", "String", mrName)
+      , ("participants", "[MetaParticipation]", show mrParticipations)
+      ]
+  entityAttributes MetaModel {..} =
+    map tupleToAttribute
+      [ ("name", "String", fromMaybe "" mmName)
+      , ("elements", "[MetaElement]", show mmElements)
+      ]
