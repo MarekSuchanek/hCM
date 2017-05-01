@@ -3,8 +3,10 @@
 module CM.Metamodel where
 
 import Data.Maybe
+import CM.Helpers
 
 type Identifier = String
+
 
 class (Show i) => Identifiable i where
   identifier :: i -> Identifier
@@ -14,10 +16,18 @@ class (Show i) => Identifiable i where
 
 -- Generic element of conceptual model
 class (Show e, Read e) =>  CMElement e where
-  constraints :: [e -> Bool]
-  constraints = []
-  valid :: e -> Bool
-  valid elem = all ($ elem) constraints
+  simpleConstraints :: [e -> Validity]
+  simpleConstraints = []
+  complexConstaints :: (ConceptualModel m) => [m -> e -> Validity]
+  complexConstaints = []
+  constraints :: (ConceptualModel m) => m -> [e -> Validity]
+  constraints model = simpleConstraints ++ map (\f -> f model) complexConstaints
+  evalConstraints :: (ConceptualModel m) => m -> e -> [Validity]
+  evalConstraints model elem = map ($ elem) $ constraints model
+  valid :: (ConceptualModel m) => m -> e -> Bool
+  valid model elem = all isValid (evalConstraints model elem)
+  violations :: (ConceptualModel m) => m -> e -> [String]
+  violations model elem = catMaybes . map (violationMessage) $ evalConstraints  model elem
   elementName :: e -> String
   elementName = takeWhile (/= ' ') . show
   toMeta :: e -> MetaElement
@@ -27,6 +37,12 @@ class (CMElement a) => ConceptualModel a where
   cmodelElements :: a -> [MetaElement]
   cmodelName :: a -> String
   cmodelName = elementName
+  toMetaModel :: a -> MetaElement
+  toMetaModel x = MetaModel { mmName = Just $ cmodelName x
+                            , mmElements = cmodelElements x
+                            , mmIdentifier = Nothing
+                            , mmValid = valid x x -- TODO: valid elems + valid model
+                            }
 
 -- Entities for representing concepts
 class (CMElement a, Identifiable a) => Entity a where
@@ -35,12 +51,12 @@ class (CMElement a, Identifiable a) => Entity a where
   entityName = elementName
   entitySuperNames :: a -> [String]
   entitySuperNames _ = []
-  toMetaEntity :: a -> MetaElement
-  toMetaEntity x = MetaEntity { meName = entityName x
-                              , meAttributes = entityAttributes x
-                              , meIdentifier = identifier x
-                              , meValid = valid x
-                              }
+  toMetaEntity :: (ConceptualModel m) => m -> a -> MetaElement
+  toMetaEntity m x = MetaEntity { meName = entityName x
+                                , meAttributes = entityAttributes x
+                                , meIdentifier = identifier x
+                                , meValid = valid m x
+                                }
 
 -- Relationship that connects multiple entities
 class (CMElement a, Identifiable a) => Relationship a where
@@ -49,12 +65,12 @@ class (CMElement a, Identifiable a) => Relationship a where
   relationshipName = elementName
   relationshipSuperNames :: a -> [String]
   relationshipSuperNames _ = []
-  toMetaRelationship :: a -> MetaElement
-  toMetaRelationship x = MetaRelationship { mrName = relationshipName x
-                                          , mrParticipations = relationshipParticipations x
-                                          , mrIdentifier = identifier x
-                                          , mrValid = valid x
-                                          }
+  toMetaRelationship :: (ConceptualModel m) => m -> a -> MetaElement
+  toMetaRelationship m x = MetaRelationship { mrName = relationshipName x
+                                            , mrParticipations = relationshipParticipations x
+                                            , mrIdentifier = identifier x
+                                            , mrValid = valid m x
+                                            }
 
 --------------------------------------------------------------------------------
 data ParticipationQuantity

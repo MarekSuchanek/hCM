@@ -11,13 +11,13 @@ data Address = Address { addressStreet :: String
                        , addressCity :: String
                        , addressPostcode :: Int
                        , addressCountry :: String
-                       } 
+                       }
              deriving (Show, Read)
 
 instance Identifiable Address
 
 instance CMElement Address where
-  toMeta = toMetaEntity
+  toMeta = toMetaEntity model
 
 instance Entity Address where
   entityAttributes Address {..} =
@@ -36,7 +36,7 @@ data Neighbors = Neighbors { leftNeighbor :: Address
 instance Identifiable Neighbors
 
 instance CMElement Neighbors where
-  toMeta = toMetaRelationship
+  toMeta = toMetaRelationship model
 
 instance Relationship Neighbors where
   relationshipParticipations Neighbors {..} =
@@ -61,8 +61,17 @@ rel1 = Neighbors { leftNeighbor = addr1
                  , rightNeighbor = addr2
                  }
 
-model = MetaModel { mmName = Just "TestModel"
-                  , mmElements = (map toMeta [addr1, addr2]) ++ (map toMeta [rel1])
-                  , mmIdentifier = Just "yolo"
-                  , mmValid = True
-                  }
+data ExampleModel = ExampleModel { mAddresses :: [Address]
+                                 , mNeighbors :: [Neighbors]
+                                 }
+                  deriving (Show, Read)
+
+instance CMElement ExampleModel where
+  toMeta = toMetaModel
+
+instance ConceptualModel ExampleModel where
+  cmodelElements ExampleModel {..} = (map toMeta mAddresses) ++ (map toMeta mNeighbors)
+
+model = ExampleModel { mAddresses = [addr1, addr2]
+                     , mNeighbors = [rel1]
+                     }
