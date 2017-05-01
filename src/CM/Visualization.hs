@@ -33,7 +33,7 @@ filterEntitiesType = filterHelper []
 
 
 elementToDotModel :: (CMElement a) => a -> String
-elementToDotModel = maybe "" metaElementToDotModel . toMeta
+elementToDotModel = metaElementToDotModel . toMeta
 
 
 metaElementToDotInstance                   :: MetaElement -> String
@@ -74,4 +74,4 @@ filterEntitiesInstance = filterHelper []
           where xTypeSeen = any (\e -> identifier x == identifier e) seen
 
 elementToDotInstance :: (CMElement a) => a -> String
-elementToDotInstance = maybe "" metaElementToDotInstance . toMeta
+elementToDotInstance = metaElementToDotInstance . toMeta

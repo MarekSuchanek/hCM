@@ -19,8 +19,13 @@ class (Show e, Read e) => CMElement e where
   valid elem = all ($ elem) constraints
   elementName :: e -> String
   elementName = takeWhile (/= ' ') . show
-  toMeta :: e -> Maybe MetaElement
-  toMeta _ = Nothing
+  toMeta :: e -> MetaElement
+
+-- Whole conceptual model class
+class (CMElement a) => ConceptualModel a where
+  cmodelElements :: a -> [MetaElement]
+  cmodelName :: a -> String
+  cmodelName = elementName
 
 -- Entities for representing concepts
 class (CMElement a, Identifiable a) => Entity a where
@@ -29,6 +34,8 @@ class (CMElement a, Identifiable a) => Entity a where
   entityName = elementName
   entitySuperNames :: a -> [String]
   entitySuperNames _ = []
+  toMetaEntity :: a -> MetaElement
+  toMetaEntity x = MetaEntity {meName = entityName x , meAttributes = entityAttributes x, meIdentifier = identifier x, meValid = valid x }
 
 -- Relationship that connects multiple entities
 class (CMElement a, Identifiable a) => Relationship a where
@@ -37,12 +44,8 @@ class (CMElement a, Identifiable a) => Relationship a where
   relationshipName = elementName
   relationshipSuperNames :: a -> [String]
   relationshipSuperNames _ = []
-
--- Whole conceptual model class
-class (CMElement a) => ConceptualModel a where
-  cmodelElements :: a -> [MetaElement]
-  cmodelName :: a -> String
-  cmodelName = elementName
+  toMetaRelationship :: a -> MetaElement
+  toMetaRelationship x = MetaRelationship {mrName = "Neighbors", mrParticipations = relationshipParticipations x, mrIdentifier = identifier x, mrValid = valid x}
 
 --------------------------------------------------------------------------------
 data ParticipationQuantity = Limited Word | Unlimited deriving (Show, Read, Eq, Ord)
@@ -79,7 +82,7 @@ data MetaElement = MetaEntity { meName :: String, meIdentifier :: String, meAttr
                  deriving (Show, Read, Eq)
 
 instance CMElement MetaElement where
-  toMeta = Just
+  toMeta = id
   elementName MetaEntity { .. } = meName
   elementName MetaRelationship { .. } = mrName
   elementName MetaModel { .. } = fromMaybe "" mmName
