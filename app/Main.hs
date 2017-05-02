@@ -11,4 +11,4 @@ main = do
   --filecontent <- readFile . head $ args
   --putStrLn . modelToDot $ filecontent
   --putStrLn . elementToDotModel $ model
-  putStrLn . elementToDotInstance $ Example.model
+  putStrLn . modelToDotInstance $ Example.model

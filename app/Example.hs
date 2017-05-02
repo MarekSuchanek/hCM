@@ -17,7 +17,7 @@ data Address = Address { addressStreet :: String
 instance Identifiable Address
 
 instance CMElement Address where
-  toMeta = toMetaEntity model
+  toMeta = toMetaEntity
 
 instance Entity Address where
   entityAttributes Address {..} =
@@ -36,7 +36,7 @@ data Neighbors = Neighbors { leftNeighbor :: Address
 instance Identifiable Neighbors
 
 instance CMElement Neighbors where
-  toMeta = toMetaRelationship model
+  toMeta = toMetaRelationship
 
 instance Relationship Neighbors where
   relationshipParticipations Neighbors {..} =
@@ -70,7 +70,7 @@ instance CMElement ExampleModel where
   toMeta = toMetaModel
 
 instance ConceptualModel ExampleModel where
-  cmodelElements ExampleModel {..} = (map toMeta mAddresses) ++ (map toMeta mNeighbors)
+  cmodelElements m = (map (toMeta m) $ mAddresses m) ++ (map (toMeta m) $ mNeighbors m)
 
 model = ExampleModel { mAddresses = [addr1, addr2]
                      , mNeighbors = [rel1]

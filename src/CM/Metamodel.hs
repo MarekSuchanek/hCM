@@ -15,7 +15,7 @@ class (Show i) => Identifiable i where
   identic x y = identifier x == identifier y
 
 -- Generic element of conceptual model
-class (Show e, Read e) =>  CMElement e where
+class (Show e, Read e) => CMElement e where
   simpleConstraints :: [e -> Validity]
   simpleConstraints = []
   complexConstaints :: (ConceptualModel m) => [m -> e -> Validity]
@@ -30,19 +30,19 @@ class (Show e, Read e) =>  CMElement e where
   violations model elem = catMaybes . map (violationMessage) $ evalConstraints  model elem
   elementName :: e -> String
   elementName = takeWhile (/= ' ') . show
-  toMeta :: e -> MetaElement
+  toMeta :: (ConceptualModel m) => m -> e -> MetaElement
 
 -- Whole conceptual model class
 class (CMElement a) => ConceptualModel a where
   cmodelElements :: a -> [MetaElement]
   cmodelName :: a -> String
   cmodelName = elementName
-  toMetaModel :: a -> MetaElement
-  toMetaModel x = MetaModel { mmName = Just $ cmodelName x
-                            , mmElements = cmodelElements x
-                            , mmIdentifier = Nothing
-                            , mmValid = valid x x -- TODO: valid elems + valid model
-                            }
+  toMetaModel :: (ConceptualModel b) => b -> a -> MetaElement
+  toMetaModel x y = MetaModel { mmName = Just $ cmodelName y
+                              , mmElements = cmodelElements y
+                              , mmIdentifier = Nothing
+                              , mmValid = valid x y -- TODO: valid elems + valid model
+                              }
 
 -- Entities for representing concepts
 class (CMElement a, Identifiable a) => Entity a where
@@ -134,7 +134,7 @@ data MetaElement
   deriving (Show, Read, Eq)
 
 instance CMElement MetaElement where
-  toMeta = id
+  toMeta _ = id
   elementName MetaEntity {..} = meName
   elementName MetaRelationship {..} = mrName
   elementName MetaModel {..} = fromMaybe "" mmName
