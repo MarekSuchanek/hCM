@@ -76,7 +76,7 @@ filterEntitiesInstance = filterHelper []
           where xTypeSeen = any (\e -> identifier x == identifier e) seen
 
 elementToDotInstance :: (ConceptualModel m, CMElement e) => m -> e -> String
-elementToDotInstance model element = metaElementToDotModel model (toMeta model element)
+elementToDotInstance model element = metaElementToDotInstance model (toMeta model element)
 
 modelToDotInstance :: (ConceptualModel m) => m -> String
 modelToDotInstance model = elementToDotInstance model model
