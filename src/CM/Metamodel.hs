@@ -56,6 +56,7 @@ class (CMElement a, Identifiable a) => Entity a where
                                 , meAttributes = entityAttributes x
                                 , meIdentifier = identifier x
                                 , meValid = valid m x
+                                , meSuperNames = entitySuperNames x
                                 }
 
 -- Relationship that connects multiple entities
@@ -120,6 +121,7 @@ data MetaElement
                , meIdentifier :: String
                , meAttributes :: [MetaAttribute]
                , meValid      :: Bool
+               , meSuperNames :: [String]
                }
   | MetaRelationship { mrName           :: String
                      , mrIdentifier     :: String
