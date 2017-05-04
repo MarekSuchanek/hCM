@@ -27,10 +27,12 @@ class (Show e, Read e) => CMElement e where
   valid :: (ConceptualModel m) => m -> e -> Bool
   valid model elem = all isValid (evalConstraints model elem)
   violations :: (ConceptualModel m) => m -> e -> [String]
-  violations model elem = catMaybes . map (violationMessage) $ evalConstraints  model elem
+  violations model elem = mapMaybe violationMessage $ evalConstraints model elem
   elementName :: e -> String
   elementName = takeWhile (/= ' ') . show
   toMeta :: (ConceptualModel m) => m -> e -> MetaElement
+  fromMeta :: e -> MetaElement -> Maybe e
+  fromMeta _ _ = Nothing
 
 -- Whole conceptual model class
 class (CMElement a) => ConceptualModel a where
@@ -77,12 +79,11 @@ class (CMElement a, Identifiable a) => Relationship a where
 data ParticipationQuantity
   = Limited Word
   | Unlimited
+  | Unique
   deriving (Show, Read, Eq, Ord)
 
 data ParticipationType
-  = MandatoryUnique
-  | OptionalUnique
-  | Mandatory ParticipationQuantity
+  = Mandatory ParticipationQuantity
   | Optional ParticipationQuantity
   | Custom ParticipationQuantity ParticipationQuantity
   deriving (Show, Read, Eq)
@@ -93,8 +94,8 @@ pquantShow Unlimited = "*"
 
 ptypeShow :: ParticipationType -> String
 ptypeShow pt = case pt of
-                MandatoryUnique -> "1"
-                OptionalUnique -> "0..1"
+                (Mandatory Unique) -> "1"
+                (Optional Unique) -> "0..1"
                 (Mandatory x) -> "1.." ++ pquantShow x
                 (Optional x) -> "0.." ++ pquantShow x
                 (Custom x y) -> pquantShow x ++ ".." ++ pquantShow y
@@ -162,3 +163,13 @@ instance Entity MetaElement where
       [ ("name", "String", fromMaybe "" mmName)
       , ("elements", "[MetaElement]", show mmElements)
       ]
+
+findAttributeValue :: [MetaAttribute] -> String -> String
+findAttributeValue [] _ = ""
+findAttributeValue (x:xs) a = if a == maName x then maValue x
+                                             else findAttributeValue xs a
+
+findParticipantId :: [MetaParticipation] -> String -> String
+findParticipantId [] _ = ""
+findParticipantId (x:xs) a = if a == mpName x then mpIdentifier x
+                                            else findParticipantId xs a

@@ -47,7 +47,7 @@ metaElementToDotInstance model MetaEntity { .. } = "\"" ++ dotId ++ "\" [shape=n
         header = "\t\t<tr><td colspan=\"3\" bgcolor=\"" ++ color ++ "\"><u>" ++ displayId ++ ":" ++ meName ++ "</u></td></tr>\n"
         rows = concatMap metaAttributeToRow meAttributes
         end = "\t</table>"
-        color = if True then "lightgreen" else "darksalmon"
+        color = if meValid then "lightgreen" else "darksalmon"
         dotId = makeDotId meIdentifier
         displayId = makeDisplayId meIdentifier
         metaAttributeToRow MetaAttribute { .. } = "\t\t<tr><td align=\"left\">" ++ maName ++ "</td><td>=</td><td align=\"left\">" ++ maValue ++ "</td></tr>\n"
@@ -56,7 +56,7 @@ metaElementToDotInstance model MetaRelationship { .. } = "\"" ++ dotId ++ "\" [s
         metaParticipationToLink MetaParticipation { .. } = "\"" ++ dotId ++ "\" -> \"" ++ makeDotId mpIdentifier ++ "\" [label=\"" ++ mpName ++ "\"];\n"
         dotId = makeDotId mrIdentifier
         displayId = makeDisplayId mrIdentifier
-        color = if True then "lightgreen" else "darksalmon"
+        color = if mrValid then "lightgreen" else "darksalmon"
 metaElementToDotInstance model MetaModel { .. } = "digraph CM_instance {\n" ++ graphset ++ nodeset ++ edgeset ++ content ++ "}\n"
   where graphset = "graph[rankdir=TD, overlap=false, splines=true, label=<<u>" ++ fromMaybe "" mmIdentifier ++ ":" ++ fromMaybe "" mmName ++ "</u>>];\n"
         nodeset  = "node [shape=record, fontsize=10, fontname=\"Verdana\"];\n"
