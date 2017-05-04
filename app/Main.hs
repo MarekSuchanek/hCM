@@ -4,6 +4,7 @@ import System.Environment
 
 import qualified Example
 import CM.Visualization
+import CM.Metamodel
 
 main :: IO ()
 main = do

@@ -6,63 +6,159 @@ import Data.Maybe
 
 import CM.Metamodel
 import CM.Visualization
+import CM.Helpers
 
-data Address = Address { addressStreet :: String
-                       , addressCity :: String
-                       , addressPostcode :: Int
-                       , addressCountry :: String
+wrapString :: String -> String
+wrapString x = "\"" ++ x ++ "\""
+
+shortenString :: String -> String
+shortenString x = if length x < 35 then x else take 32 x ++ "..."
+
+toInts :: [String] -> [Int]
+toInts = map read
+
+data Student = Student { stUsername :: String
+                       , stFirstname :: String
+                       , stLastname :: String
                        }
              deriving (Show, Read)
 
-instance Identifiable Address
+instance Identifiable Student where
+  identifier = stUsername
 
-instance CMElement Address where
+instance CMElement Student where
   toMeta = toMetaEntity
 
-instance Entity Address where
-  entityAttributes Address {..} =
+instance Entity Student where
+  entityAttributes Student {..} =
     map tupleToAttribute
-      [ ("street", "String", addressStreet)
-      , ("city", "String", addressCity)
-      , ("postcode", "Int", show addressPostcode)
-      , ("country", "String", addressCountry)
+      [ ("username", "String", wrapString stUsername)
+      , ("firstname", "String", wrapString stFirstname)
+      , ("lastname", "String", wrapString stLastname)
+      , ("email", "String", wrapString $ stUsername ++ "@fit.cvut.cz")
       ]
 
-data Neighbors = Neighbors { leftNeighbor :: Address
-                           , rightNeighbor :: Address
-                           }
+data Course = Course { crsCode :: String
+                     , crsCredits :: Int
+                     , crsName :: String
+                     , crsDesc :: String
+                     }
+           deriving (Show, Read)
+
+instance Identifiable Course where
+  identifier = crsCode
+
+creditsNonNegative :: Course -> Validity
+creditsNonNegative Course {..} =
+  newConstraint (crsCredits >= 0) "Negative credits"
+
+instance CMElement Course where
+  toMeta = toMetaEntity
+  simpleConstraints = [creditsNonNegative]
+
+instance Entity Course where
+  entityAttributes Course {..} =
+    map tupleToAttribute
+      [ ("code", "String", wrapString crsCode)
+      , ("name", "String", wrapString crsName)
+      , ("credits", "Int", show crsCredits)
+      , ("descrition", "String", wrapString . shortenString $ crsDesc)
+      ]
+
+data Enrollment = Enrollment { enrlSince :: (Int, Int, Int)
+                             , enrlUntil :: Maybe (Int, Int, Int)
+                             }
                deriving (Show, Read)
 
-instance Identifiable Neighbors
+instance Identifiable Enrollment
 
-instance CMElement Neighbors where
-  toMeta = toMetaRelationship
+toDateStr :: (Int, Int, Int) -> String
+toDateStr (d,m,y) = show d ++ "/" ++ show m ++ "/" ++ show y
 
-instance Relationship Neighbors where
-  relationshipParticipations Neighbors {..} =
-    map tupleToParticipation
-      [ ("left", "Address", identifier leftNeighbor, Optional Unlimited)
-      , ("right", "Address", identifier rightNeighbor, Optional Unlimited)
+sinceBeforeUntil :: Enrollment -> Validity
+sinceBeforeUntil Enrollment {enrlUntil = Nothing, ..} = Valid
+sinceBeforeUntil Enrollment {enrlSince = a, enrlUntil = Just b} =
+  newConstraint (a < b) "Since is not before until"
+
+instance CMElement Enrollment where
+  toMeta = toMetaEntity
+  simpleConstraints = [sinceBeforeUntil]
+
+instance Entity Enrollment where
+  entityAttributes Enrollment {..} =
+    map tupleToAttribute
+      [ ("since", "DateTime", toDateStr enrlSince)
+      , ("until", "Maybe DateTime", maybe "N/A" toDateStr enrlUntil)
       ]
 
-addr1 = Address { addressStreet = "A"
-                , addressCity = ""
-                , addressPostcode = 0
-                , addressCountry = ""
+data IsEnrolled = IsEnrolled { ieWho :: Student
+                             , ieWhat :: Course
+                             , ieTruth :: Enrollment
+                             }
+                deriving (Show, Read)
+
+instance Identifiable IsEnrolled
+
+max2Enrollments :: (ConceptualModel m) => m -> IsEnrolled -> Validity
+max2Enrollments model r =
+  newConstraint (same <= 2) "Student can enroll same course only twice"
+  where same = length . filter areSame $ enrolledRelationships
+        areSame e = (sameCourse e) && (sameStudent e)
+        sameCourse e = (getCourseId e) == (identifier . ieWhat $ r)
+        sameStudent e = (getStudentId e) == (identifier . ieWho $ r)
+        enrolledRelationships = filter isIsEnrolled $ cmodelElements model
+        getCourseId MetaRelationship {..} = findParticipantId mrParticipations "Course"
+        getCourseId _ = ""
+        getStudentId MetaRelationship {..} = findParticipantId mrParticipations "Student"
+        getStudentId _ = ""
+        isIsEnrolled MetaRelationship {mrName = "IsEnrolled", ..} = True
+        isIsEnrolled _ = False
+
+instance CMElement IsEnrolled where
+  toMeta = toMetaRelationship
+  complexConstaints = [max2Enrollments]
+
+instance Relationship IsEnrolled where
+  relationshipName _ = "enrolled"
+  relationshipParticipations IsEnrolled {..} =
+    map tupleToParticipation
+      [ ("who", "Student", identifier ieWho, Optional Unlimited)
+      , ("what", "Course", identifier ieWhat, Optional Unlimited)
+      , ("truthmaker", "Enrollment", identifier ieTruth, Mandatory Unique)
+      ]
+
+studM = Student { stUsername = "suchama4"
+                , stFirstname = "Marek"
+                , stLastname = "Suchánek"
                 }
 
-addr2 = Address { addressStreet = "B"
-                , addressCity = ""
-                , addressPostcode = 0
-                , addressCountry = ""
-                }
+courseDIP = Course { crsCode = "MI-DIP"
+                   , crsCredits = 23
+                   , crsName = "Diploma Project"
+                   , crsDesc = ""
+                   }
 
-rel1 = Neighbors { leftNeighbor = addr1
-                 , rightNeighbor = addr2
-                 }
+courseRRI = Course { crsCode = "MI-RRI.0"
+                   , crsCredits = -5
+                   , crsName = "Risk Management in Informatics"
+                   , crsDesc = "Information security is very often considered as one of main objectives to secure targets of information processing. "
+                   }
 
-data ExampleModel = ExampleModel { mAddresses :: [Address]
-                                 , mNeighbors :: [Neighbors]
+enrlMxDIP = Enrollment { enrlSince = (20,2,2017)
+                       , enrlUntil = Just (1,6,2016)
+                       }
+
+enrlMxRRI = Enrollment { enrlSince = (20,2,2017)
+                       , enrlUntil = Nothing
+                       }
+
+ienrlMxDIP = IsEnrolled { ieWho = studM, ieWhat = courseDIP, ieTruth = enrlMxDIP }
+ienrlMxRRI = IsEnrolled { ieWho = studM, ieWhat = courseRRI, ieTruth = enrlMxRRI }
+
+data ExampleModel = ExampleModel { mStudents :: [Student]
+                                 , mCourses :: [Course]
+                                 , mEnrollments :: [Enrollment]
+                                 , mIsEnrolled :: [IsEnrolled]
                                  }
                   deriving (Show, Read)
 
@@ -70,8 +166,13 @@ instance CMElement ExampleModel where
   toMeta = toMetaModel
 
 instance ConceptualModel ExampleModel where
-  cmodelElements m = (map (toMeta m) $ mAddresses m) ++ (map (toMeta m) $ mNeighbors m)
+  cmodelElements m = (map (toMeta m) $ mStudents m)
+                  ++ (map (toMeta m) $ mCourses m)
+                  ++ (map (toMeta m) $ mEnrollments m)
+                  ++ (map (toMeta m) $ mIsEnrolled m)
 
-model = ExampleModel { mAddresses = [addr1, addr2]
-                     , mNeighbors = [rel1]
+model = ExampleModel { mStudents = [studM]
+                     , mCourses = [courseDIP, courseRRI]
+                     , mEnrollments = [enrlMxDIP, enrlMxRRI]
+                     , mIsEnrolled = [ienrlMxDIP, ienrlMxRRI]
                      }
