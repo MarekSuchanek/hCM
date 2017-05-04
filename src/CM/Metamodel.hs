@@ -23,11 +23,11 @@ class (Show e, Read e) => CMElement e where
   constraints :: (ConceptualModel m) => m -> [e -> Validity]
   constraints model = simpleConstraints ++ map (\f -> f model) complexConstaints
   evalConstraints :: (ConceptualModel m) => m -> e -> [Validity]
-  evalConstraints model elem = map ($ elem) $ constraints model
+  evalConstraints model x = map ($ x) $ constraints model
   valid :: (ConceptualModel m) => m -> e -> Bool
-  valid model elem = all isValid (evalConstraints model elem)
+  valid model x = all isValid (evalConstraints model x)
   violations :: (ConceptualModel m) => m -> e -> [String]
-  violations model elem = mapMaybe violationMessage $ evalConstraints model elem
+  violations model x = mapMaybe violationMessage $ evalConstraints model x
   elementName :: e -> String
   elementName = takeWhile (/= ' ') . show
   toMeta :: (ConceptualModel m) => m -> e -> MetaElement
