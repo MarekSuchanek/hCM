@@ -6,6 +6,10 @@ import Data.List
 import Data.Hashable
 import CM.Metamodel
 
+nl2br        :: String -> String
+nl2br []     = ""
+nl2br (x:xs) = if x == '\n' then "<BR/>" ++ nl2br xs else x : nl2br xs
+
 metaElementToDotModel :: (ConceptualModel m) => m -> MetaElement -> String
 metaElementToDotModel model MetaEntity { .. } = "\"" ++ meName ++ "\" [shape=none, margin=0, label=<\n" ++ table ++ "\n>];\n" ++ supers
   where table = start ++ header ++ rows ++ end
@@ -50,7 +54,7 @@ metaElementToDotInstance model MetaEntity { .. } = "\"" ++ dotId ++ "\" [shape=n
         color = if meValid then "lightgreen" else "darksalmon"
         dotId = makeDotId meIdentifier
         displayId = makeDisplayId meIdentifier
-        metaAttributeToRow MetaAttribute { .. } = "\t\t<tr><td align=\"left\">" ++ maName ++ "</td><td>=</td><td align=\"left\">" ++ maValue ++ "</td></tr>\n"
+        metaAttributeToRow MetaAttribute { .. } = "\t\t<tr><td align=\"left\">" ++ maName ++ "</td><td>=</td><td align=\"left\">" ++ nl2br maValue ++ "</td></tr>\n"
 metaElementToDotInstance model MetaRelationship { .. } = "\"" ++ dotId ++ "\" [shape=diamond, label=<<u>" ++ displayId ++ ":" ++ mrName ++ "</u>>, style=\"filled\", fillcolor=\"" ++ color ++ "\"];\n" ++ participationLinks
   where participationLinks = concatMap metaParticipationToLink mrParticipations
         metaParticipationToLink MetaParticipation { .. } = "\"" ++ dotId ++ "\" -> \"" ++ makeDotId mpIdentifier ++ "\" [label=\"" ++ mpName ++ "\"];\n"
