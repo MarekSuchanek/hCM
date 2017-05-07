@@ -11,7 +11,7 @@ nl2br []     = ""
 nl2br (x:xs) = if x == '\n' then "<BR/>" ++ nl2br xs else x : nl2br xs
 
 metaElementToDotModel :: (ConceptualModel m) => m -> MetaElement -> String
-metaElementToDotModel model MetaEntity { .. } = "\"" ++ meName ++ "\" [shape=none, margin=0, label=<\n" ++ table ++ "\n>];\n" ++ supers
+metaElementToDotModel model MetaEntity { .. } = "\"" ++ meName ++ "\" [shape=none, margin=0, label=<\n" ++ table ++ "\n>];\n" ++ supers ++ subs
   where table = start ++ header ++ rows ++ end
         start = "\t<table border=\"0\" cellborder=\"1\" cellspacing=\"0\" cellpadding=\"4\">\n"
         header = "\t\t<tr><td colspan=\"3\" bgcolor=\"lightblue\">" ++ meName ++ "</td></tr>\n"
@@ -19,6 +19,8 @@ metaElementToDotModel model MetaEntity { .. } = "\"" ++ meName ++ "\" [shape=non
         end = "\t</table>"
         supers = intercalate "\n" . map superToModelLink $ meSuperNames
         superToModelLink x = meName ++ " -> " ++ x ++ " [arrowhead=empty];"
+        subs = intercalate "\n" . map subToModelLink $ meSubNames
+        subToModelLink x =  x ++ " -> " ++ meName ++ " [arrowhead=empty];"
         metaAttributeToRow MetaAttribute { .. } = "\t\t<tr><td align=\"left\">" ++ maName ++ "</td><td>::</td><td align=\"left\">" ++ maType ++ "</td></tr>\n"
 metaElementToDotModel model MetaRelationship { .. } = "\"" ++ mrName ++ "\" [shape=diamond];\n" ++ participationLinks
   where participationLinks = concatMap metaParticipationToModelLink mrParticipations
@@ -68,10 +70,10 @@ metaElementToDotInstance model MetaModel { .. } = "digraph CM_instance {\n" ++ g
         content  =  intercalate "\n" . map (metaElementToDotInstance model) . filterEntitiesInstance $ mmElements
 
 makeDotId :: String -> String
-makeDotId s = if length s > 10 then "h" ++ (show . hash $ s) else s
+makeDotId s = if length s > 20 then "h" ++ (show . hash $ s) else s
 
 makeDisplayId :: String -> String
-makeDisplayId s = if length s > 10 then "" else s
+makeDisplayId s = if length s > 20 then "" else s
 
 filterEntitiesInstance :: [MetaElement] -> [MetaElement]
 filterEntitiesInstance = filterHelper []

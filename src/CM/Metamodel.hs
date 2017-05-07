@@ -7,7 +7,6 @@ import CM.Helpers
 
 type Identifier = String
 
-
 class (Show i) => Identifiable i where
   identifier :: i -> Identifier
   identifier = show
@@ -37,13 +36,17 @@ class (Show e, Read e) => CMElement e where
 -- Whole conceptual model class
 class (CMElement a) => ConceptualModel a where
   cmodelElements :: a -> [MetaElement]
+  validModel :: a -> Bool
+  validModel m = validSelf && validElements
+                where validSelf = valid m m
+                      validElements = all metaElementValid (cmodelElements m)
   cmodelName :: a -> String
   cmodelName = elementName
   toMetaModel :: (ConceptualModel b) => b -> a -> MetaElement
-  toMetaModel x y = MetaModel { mmName = Just $ cmodelName y
-                              , mmElements = cmodelElements y
+  toMetaModel _ m = MetaModel { mmName = Just $ cmodelName m
+                              , mmElements = cmodelElements m
                               , mmIdentifier = Nothing
-                              , mmValid = valid x y -- TODO: valid elems + valid model
+                              , mmValid = validModel m
                               }
 
 -- Entities for representing concepts
@@ -53,12 +56,15 @@ class (CMElement a, Identifiable a) => Entity a where
   entityName = elementName
   entitySuperNames :: a -> [String]
   entitySuperNames _ = []
+  entitySubNames :: a -> [String]
+  entitySubNames _ = []
   toMetaEntity :: (ConceptualModel m) => m -> a -> MetaElement
   toMetaEntity m x = MetaEntity { meName = entityName x
                                 , meAttributes = entityAttributes x
                                 , meIdentifier = identifier x
                                 , meValid = valid m x
                                 , meSuperNames = entitySuperNames x
+                                , meSubNames = entitySubNames x
                                 }
 
 -- Relationship that connects multiple entities
@@ -74,7 +80,6 @@ class (CMElement a, Identifiable a) => Relationship a where
                                             , mrIdentifier = identifier x
                                             , mrValid = valid m x
                                             }
-
 --------------------------------------------------------------------------------
 data ParticipationQuantity
   = Limited Word
@@ -123,6 +128,7 @@ data MetaElement
                , meAttributes :: [MetaAttribute]
                , meValid      :: Bool
                , meSuperNames :: [String]
+               , meSubNames   :: [String]
                }
   | MetaRelationship { mrName           :: String
                      , mrIdentifier     :: String
@@ -135,6 +141,21 @@ data MetaElement
               , mmValid      :: Bool
               }
   deriving (Show, Read, Eq)
+
+metaElementName :: MetaElement -> String
+metaElementName MetaEntity {..} = meName
+metaElementName MetaRelationship {..} = mrName
+metaElementName MetaModel {..} = fromMaybe "" mmName
+
+metaElementIdentifier :: MetaElement -> String
+metaElementIdentifier MetaEntity {..} = meIdentifier
+metaElementIdentifier MetaRelationship {..} = mrIdentifier
+metaElementIdentifier MetaModel {..} = fromMaybe "" mmIdentifier
+
+metaElementValid :: MetaElement -> Bool
+metaElementValid MetaEntity {..} = meValid
+metaElementValid MetaRelationship {..} = mrValid
+metaElementValid MetaModel {..} = mmValid
 
 instance CMElement MetaElement where
   toMeta _ = id
