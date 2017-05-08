@@ -4,6 +4,8 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Build Status](https://travis-ci.org/MarekSuchanek/hCM.svg?branch=master)](https://travis-ci.org/MarekSuchanek/hCM)
+[![Hackage](https://img.shields.io/hackage/v/hCM.svg)](https://hackage.haskell.org/package/hCM-0.1.0.0)
+[![Hackage-Deps](https://img.shields.io/hackage-deps/v/hCM.svg)](http://packdeps.haskellers.com/feed?needle=hCM)
 
 ## Introduction
 

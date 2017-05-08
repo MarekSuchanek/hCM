@@ -1,14 +1,21 @@
 name:                hCM
 version:             0.1.0.0
-synopsis:            Conceptual modeling support library for Haskell
+synopsis:            Conceptual modelling support for Haskell
 homepage:            https://github.com/MarekSuchanek/hCM
 license:             MIT
 license-file:        LICENSE
-author:              Marek Suchánek
+author:              Marek Suchánek <suchama4@fit.cvut.cz>
+maintainer:          suchama4@fit.cvut.cz
+description:
+  hCM is the result of finding a suitable way how to support conceptual
+  modelling within Haskell programming language in the most simple but smart manner.
+  hCM should allow you to build conceptual model with Haskell freely without any
+  restrictions about selected representation of entities, relationships and model
+  itself.
 copyright:           2017 Marek Suchánek
 category:            Model, Development, Data Structures
 build-type:          Simple
-extra-source-files:  README.md
+extra-source-files:  README.md stack.yaml CHANGELOG.md
 cabal-version:       >=1.10
 
 library
