@@ -3,6 +3,9 @@ Module      : CM.Validity
 Description : Tools for working with validity
 Copyright   : (c) Marek Suchánek, 2017
 License     : MIT
+
+Constructions for working with conceptual model elements validity and
+constraints.
 -}
 module CM.Validity where
 

@@ -4,6 +4,10 @@ Module      : CM.Metamodel
 Description : Conceptual model metamodel
 Copyright   : (c) Marek Suchánek, 2017
 License     : MIT
+
+Metamodel used to create actual models within system provides simple
+way for compiler-driven modelling without restricting usage of various
+Haskell constructs of structure and behavior coding.
 -}
 module CM.Metamodel where
 

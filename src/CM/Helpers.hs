@@ -3,6 +3,10 @@ Module      : CM.Helpers
 Description : Helper constructs for conceptual modelling
 Copyright   : (c) Marek Suchánek, 2017
 License     : MIT
+
+Helper constructs for conceptual modelling that are making
+modelling with library easier or can be used often in different
+way.
 -}
 module CM.Helpers where
 

@@ -4,6 +4,8 @@ Module      : CM.Visualization
 Description : Conceptual model simple visulization functions
 Copyright   : (c) Marek Suchánek, 2017
 License     : MIT
+
+Conceptual model simple visulization functions via DOT format.
 -}
 module CM.Visualization where
 
