@@ -1,15 +1,24 @@
 {-# LANGUAGE RecordWildCards #-}
+{-|
+Module      : CM.Visualization
+Description : Conceptual model simple visulization functions
+Copyright   : (c) Marek Suchánek, 2017
+License     : MIT
+-}
 module CM.Visualization where
 
 import Data.Maybe
 import Data.List
 import Data.Hashable
 import CM.Metamodel
+import CM.Helpers
 
+-- |Helper function for converting new lines to HTML.
 nl2br        :: String -> String
 nl2br []     = ""
 nl2br (x:xs) = if x == '\n' then "<BR/>" ++ nl2br xs else x : nl2br xs
 
+-- |Convert 'MetaElement' to DOT code fragment for the model visualization.
 metaElementToDotModel :: (ConceptualModel m) => m -> MetaElement -> String
 metaElementToDotModel model MetaEntity { .. } = "\"" ++ meName ++ "\" [shape=none, margin=0, label=<\n" ++ table ++ "\n>];\n" ++ supers ++ subs
   where table = start ++ header ++ rows ++ end
@@ -31,6 +40,7 @@ metaElementToDotModel model MetaModel { .. } = "digraph CM_model {\n" ++ graphse
         edgeset  = "edge [arrowhead=none, fontsize=10];\n\n"
         content  =  intercalate "\n" . map (elementToDotModel model) . filterEntitiesType $ mmElements
 
+-- |Filtering 'MetaElements' by type names, i.e. every entity type will be just once.
 filterEntitiesType :: [MetaElement] -> [MetaElement]
 filterEntitiesType = filterHelper []
   where filterHelper seen [] = seen
@@ -39,13 +49,15 @@ filterEntitiesType = filterHelper []
           | otherwise = filterHelper (seen ++ [x]) xs
           where xTypeSeen = any (\e -> elementName x == elementName e) seen
 
-
+-- |Convert element in model to DOT for model visualization.
 elementToDotModel :: (ConceptualModel m, CMElement e) => m -> e -> String
 elementToDotModel model element = metaElementToDotModel model (toMeta model element)
 
+-- |Convert whole model to DOT for model visualization.
 modelToDotModel :: (ConceptualModel m) => m -> String
 modelToDotModel model = elementToDotModel model model
 
+-- |Convert 'MetaElement' to DOT code fragment for the instance visualization.
 metaElementToDotInstance :: (ConceptualModel m) => m -> MetaElement -> String
 metaElementToDotInstance model MetaEntity { .. } = "\"" ++ dotId ++ "\" [shape=none, margin=0, label=<\n" ++ table ++ "\n>];\n"
   where table = start ++ header ++ rows ++ end
@@ -69,12 +81,15 @@ metaElementToDotInstance model MetaModel { .. } = "digraph CM_instance {\n" ++ g
         edgeset  = "edge [arrowhead=none, fontsize=10];\n\n"
         content  =  intercalate "\n" . map (metaElementToDotInstance model) . filterEntitiesInstance $ mmElements
 
+-- |Create DOT identifier based on given string.
 makeDotId :: String -> String
 makeDotId s = if length s > 20 then "h" ++ (show . hash $ s) else s
 
+-- |Create showable identifier based on given string.
 makeDisplayId :: String -> String
 makeDisplayId s = if length s > 20 then "" else s
 
+-- |Filtering 'MetaElements' by identifier, i.e. every instance will be just once.
 filterEntitiesInstance :: [MetaElement] -> [MetaElement]
 filterEntitiesInstance = filterHelper []
   where filterHelper seen [] = seen
@@ -83,8 +98,10 @@ filterEntitiesInstance = filterHelper []
           | otherwise = filterHelper (seen ++ [x]) xs
           where xTypeSeen = any (\e -> identifier x == identifier e) seen
 
+-- |Convert element in model to DOT for instance visualization.
 elementToDotInstance :: (ConceptualModel m, CMElement e) => m -> e -> String
 elementToDotInstance model element = metaElementToDotInstance model (toMeta model element)
 
+-- |Convert whole model to DOT for instance visualization.
 modelToDotInstance :: (ConceptualModel m) => m -> String
 modelToDotInstance model = elementToDotInstance model model

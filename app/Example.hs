@@ -6,6 +6,7 @@ import Data.Maybe
 
 import CM.Metamodel
 import CM.Visualization
+import CM.Validity
 import CM.Helpers
 
 wrapString :: String -> String

@@ -1,14 +1,37 @@
+{-|
+Module      : CM.Helpers
+Description : Helper constructs for conceptual modelling
+Copyright   : (c) Marek Suchánek, 2017
+License     : MIT
+-}
 module CM.Helpers where
 
-data Validity = Valid | Invalid String deriving (Show, Read, Eq)
+import CM.Metamodel
 
-isValid :: Validity -> Bool
-isValid Valid = True
-isValid _     = False
 
-violationMessage :: Validity -> Maybe String
-violationMessage (Invalid msg) = Just msg
-violationMessage _             = Nothing
+-- |Convert 'ParticipationQuantity' to simple string representation
+pquantShow :: ParticipationQuantity -> String
+pquantShow (Limited x) = show x
+pquantShow Unlimited = "*"
+pquantShow Unique = "1"
 
-newConstraint :: Bool -> String -> Validity
-newConstraint b msg = if b then Valid else Invalid msg
+-- |Convert 'ParticipationType' to simple string representation
+ptypeShow :: ParticipationType -> String
+ptypeShow pt = case pt of
+              (Mandatory Unique) -> "1"
+              (Optional Unique) -> "0..1"
+              (Mandatory x) -> "1.." ++ pquantShow x
+              (Optional x) -> "0.." ++ pquantShow x
+              (Custom x y) -> pquantShow x ++ ".." ++ pquantShow y
+
+-- |Find value of attribute with given name
+findAttributeValue :: [MetaAttribute] -> String -> String
+findAttributeValue [] _ = ""
+findAttributeValue (x:xs) a = if a == maName x then maValue x
+                                               else findAttributeValue xs a
+
+-- |Find identifier of participant with given name
+findParticipantId :: [MetaParticipation] -> String -> String
+findParticipantId [] _ = ""
+findParticipantId (x:xs) a = if a == mpName x then mpIdentifier x
+                                              else findParticipantId xs a

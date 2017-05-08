@@ -5,6 +5,10 @@
 
 Conceptual modeling support library for Haskell.
 
+## Installation & usage
+
+-  Use standard Haskell way with [stack](https://www.haskellstack.org/).
+-  Optionally you can use prepared [Makefile](Makefile).
 
 ## License
 
